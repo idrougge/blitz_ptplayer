@@ -88,9 +88,43 @@
 ;   than 4 - _mt_MusicChannels channels at once. Defaults to 0.
 ;
 
+		include	"blitz.i"
 		include	"custom.i"
 		include	"cia.i"
 
+		libheader 195,0,0,0,0
+		
+		astatement
+			args	long,byte
+			libs
+			subs	_mt_init,0,0
+		name "MTInit","moduladress, startposition",0
+		
+		astatement
+			args	byte
+			libs
+			subs	_mt_install_cia,0,0
+		name "MTInstall","PAL=1, NTSC=0",0
+		
+		astatement
+			args	byte
+			libs
+			subs	_mt_enable_stub,0,0
+		name "MTEnable","true or false",0
+		
+		astatement
+			args
+			libs
+			subs	_mt_remove_cia,0,0
+		name "MTRemove","avinstallerar avbrottsrutin",0
+
+		astatement
+			args
+			libs
+			subs	_mt_end_stub,0,0
+		name "MTEnd","stops playing current module",0
+
+		libfin
 
 ; Audio channel registers
 AUDLC		equ	0
@@ -173,6 +207,12 @@ _mt_install_cia:
 ; a0 = AutoVecBase
 ; d0 = PALflag.b (0 is NTSC)
 
+;----- Save registers for Blitz 2 ---
+	movem.l a3-a6,-(sp)
+	lea CUSTOM,a6
+	move.l #0,a0
+;-------------------------------------
+
 	ifnd	SDATA
 	move.l	a4,-(sp)
 	lea	mt_data(pc),a4
@@ -243,6 +283,9 @@ _mt_remove_cia:
 ; Remove CIA-B music interrupt and restore the old vector.
 ; a6 = CUSTOM
 
+	movem.l a3-a6,-(sp) ; Save registers for Blitz 2
+	lea CUSTOM,a6
+
 	ifnd	SDATA
 	move.l	a4,-(sp)
 	lea	mt_data(pc),a4
@@ -275,6 +318,8 @@ _mt_remove_cia:
 	ifnd	SDATA
 	move.l	(sp)+,a4
 	endc
+	
+	movem.l (sp)+,a3-a6	; Restore registers for Blitz
 	rts
 
 
@@ -409,6 +454,14 @@ _mt_init:
 ; a1 = sample pointer (NULL means samples are stored within the module)
 ; d0 = initial song position
 
+; --- Init for Blitz ----
+	movem.l	a3-a6,-(sp)
+	lea	CUSTOM,a6
+	move.l	d0,a0
+	move.l	#0,a1
+	moveq	#1,d0
+; -----------------------
+
 	ifnd	SDATA
 	move.l	a4,-(sp)
 	lea	mt_data(pc),a4
@@ -535,10 +588,26 @@ _mt_end:
 	move.w	d0,AUD2VOL(a6)
 	move.w	d0,AUD3VOL(a6)
 	move.w	#$000f,DMACON(a6)
+	
+	movem.l (sp)+,a3-a6 ; Restore registers before returning to Blitz
 	rts
 
+;------------ Blitz2 stubs -----------
+_mt_enable_stub:
+	ifd	SDATA
+	move.b d0,mt_Enable(a4)
+	else
+	lea	mt_data+mt_Enable(pc),a0
+	move.b d0,(a0)
+	endc
+	rts
 
-;---------------------------------------------------------------------------
+_mt_end_stub:
+	movem.l a3-a6,-(sp)
+	lea CUSTOM,a6
+	bra _mt_end
+ 
+;-------------------------------------
 	xdef	_mt_soundfx
 _mt_soundfx:
 ; Request playing of an external sound effect on the most unused channel.
