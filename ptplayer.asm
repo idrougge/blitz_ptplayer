@@ -92,7 +92,9 @@
 		include	"custom.i"
 		include	"cia.i"
 
+		audiolib equ   116
 		libheader 195,0,0,0,0
+; libheader 195,_mt_install_cia,0,_mt_remove_cia,_mt_remove_cia : Funkar ej av okänd anledning, ger unknown library $$$$
 		
 		astatement
 			args	long,byte
@@ -124,7 +126,21 @@
 			subs	_mt_end_stub,0,0
 		name "MTEnd","stops playing current module",0
 
-		libfin
+		astatement
+			args	long,word,word,word
+			libs
+			subs	_mt_soundfx_stub,0,0
+		name "MTSoundFX","samplepointer.l, length.w, period,w, volume.w"
+
+		; _mt_soundfx(a6=CUSTOM, a0=SamplePointer,
+		;            d0=SampleLength.w, d1=SamplePeriod.w, d2=SampleVolume.w)
+		astatement
+		args	word,word
+		libs	audiolib,$1080
+		subs	_mt_soundfx_test,0,0
+		name	"MTSound","Sound#, volume (0-64)"
+		
+		libfin ; End of Blitz library header
 
 ; Audio channel registers
 AUDLC		equ	0
@@ -609,7 +625,15 @@ _mt_end_stub:
  
 ;-------------------------------------
 	xdef	_mt_soundfx
-_mt_soundfx:
+_mt_soundfx_test:
+	movem.l	a3-a6,-(sp)
+	lea	CUSTOM,a6
+	move.w	d1,d2      ; volume
+	move.w	4(a0),d1   ; period
+	move.w	6(a0),d0   ; length
+	move.l	(a0),a0    ; sample data
+	bra	_mt_soundfx
+_mt_soundfx_stub:
 ; Request playing of an external sound effect on the most unused channel.
 ; This function is for compatibility with the old API only!
 ; You should call _mt_playfx instead!
@@ -619,6 +643,16 @@ _mt_soundfx:
 ; d1.w = sample period
 ; d2.w = sample volume
 
+;--- Blitz 2 call stub -----
+	movem.l	a3-a6,-(sp)
+	lea	CUSTOM,a6
+	move.l	d0,a0
+	move.w	d1,d0
+	move.w	d2,d1
+	move.w	d3,d2
+;---------------------------
+
+_mt_soundfx:
 	lea	-sfx_sizeof(sp),sp
 	move.l	a0,a1
 	move.l	sp,a0
@@ -627,6 +661,7 @@ _mt_soundfx:
 	move.w	#$ff01,sfx_cha(a0)	; any channel, priority=1
 	bsr	_mt_playfx
 	lea	sfx_sizeof(sp),sp
+	movem.l	(sp)+,a3-a6  ; Restore registers for Blitz
 	rts
 
 
