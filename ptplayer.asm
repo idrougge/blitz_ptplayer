@@ -93,32 +93,33 @@
 		include	"cia.i"
 
 		audiolib equ   116
-		libheader 195,0,0,0,0
+		libheader 195,0,0,blitz_finit,0
+
 ; libheader 195,_mt_install_cia,0,_mt_remove_cia,_mt_remove_cia : Funkar ej av okänd anledning, ger unknown library $$$$
 		
 		astatement
 			args	long,byte
 			libs
 			subs	_mt_init,0,0
-		name "MTInit","moduladress, startposition",0
+		name "MTInit","module address, starting position",0
 		
 		astatement
 			args	byte
 			libs
 			subs	_mt_install_cia,0,0
-		name "MTInstall","PAL=1, NTSC=0",0
+		name "MTInstall","Install player routine. PAL=true, NTSC=false",0
 		
 		astatement
 			args	byte
 			libs
 			subs	_mt_enable_stub,0,0
-		name "MTEnable","true or false",0
+		name "MTPlay","On or Off",0
 		
 		astatement
 			args
 			libs
 			subs	_mt_remove_cia,0,0
-		name "MTRemove","avinstallerar avbrottsrutin",0
+		name "MTRemove","Remove player from system",0
 
 		astatement
 			args
@@ -137,10 +138,18 @@
 		astatement
 		args	word,word
 		libs	audiolib,$1080
-		subs	_mt_soundfx_test,0,0
+		subs	_mt_soundfx_soundobject,0,0
 		name	"MTSound","Sound#, volume (0-64)"
-		
+
+blitz_finit:
+		nullsub	_blitz_mt_lib_finit,0,0
+
 		libfin ; End of Blitz library header
+
+; Deinitialisation for Blitz so that user doesn't have to call MTRemove
+_blitz_mt_lib_finit:
+	bra	_mt_remove_cia
+;--------------------
 
 ; Audio channel registers
 AUDLC		equ	0
@@ -624,8 +633,7 @@ _mt_end_stub:
 	bra _mt_end
  
 ;-------------------------------------
-	xdef	_mt_soundfx
-_mt_soundfx_test:
+_mt_soundfx_soundobject:
 	movem.l	a3-a6,-(sp)
 	lea	CUSTOM,a6
 	move.w	d1,d2      ; volume
@@ -633,6 +641,8 @@ _mt_soundfx_test:
 	move.w	6(a0),d0   ; length
 	move.l	(a0),a0    ; sample data
 	bra	_mt_soundfx
+
+	xdef	_mt_soundfx
 _mt_soundfx_stub:
 ; Request playing of an external sound effect on the most unused channel.
 ; This function is for compatibility with the old API only!
