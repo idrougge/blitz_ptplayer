@@ -93,15 +93,13 @@
 		include	"cia.i"
 
 		audiolib equ   116
-		libheader 195,0,0,blitz_finit,0
-
-; libheader 195,_mt_install_cia,0,_mt_remove_cia,_mt_remove_cia : Funkar ej av okänd anledning, ger unknown library $$$$
+		libheader 195,0,0,blitz_finit,runerrs
 		
 		astatement
 			args	long,byte
 			libs
 			subs	_mt_init,0,0
-		name "MTInit","module address, starting position",0
+		name "MTInit","module address, starting position (inserts module into player)",0
 		
 		astatement
 			args	byte
@@ -113,7 +111,7 @@
 			args	byte
 			libs
 			subs	_mt_enable_stub,0,0
-		name "MTPlay","On or Off",0
+		name "MTPlay","On/Off for module playback",0
 		
 		astatement
 			args
@@ -125,24 +123,46 @@
 			args
 			libs
 			subs	_mt_end_stub,0,0
-		name "MTEnd","stops playing current module",0
+		name "MTEnd","Stop playing current module",0
 
 		astatement
 			args	long,word,word,word
 			libs
 			subs	_mt_soundfx_stub,0,0
-		name "MTSoundFX","samplepointer.l, length.w, period,w, volume.w"
+		name "MTSoundFX","samplepointer.l, length.w, period.w, volume.w (0..64)"
 
-		; _mt_soundfx(a6=CUSTOM, a0=SamplePointer,
-		;            d0=SampleLength.w, d1=SamplePeriod.w, d2=SampleVolume.w)
 		astatement
-		args	word,word
-		libs	audiolib,$1080
-		subs	_mt_soundfx_soundobject,0,0
+			args	word,word
+			libs	audiolib,$1080
+			subs	_mt_soundfx_soundobject,_soundobjectcheck,0
 		name	"MTSound","Sound#, volume (0-64)"
 
+		astatement
+			args	word
+			libs
+			subs	_mt_mastervol,_volumecheck,0
+		name	"MTMasterVolume","Master volume (0..64) for all music channels."
+
+		astatement
+			args	byte
+			libs
+			subs	_mt_musicmask,0,0
+		name	"MTMusicMask","Set bits 0-3 to reserve channels for music only."
+
+		astatement
+			args	byte
+			libs
+			subs	_mt_MusicChannels_stub,0,0
+		name	"MTMusicChannels","number of channels dedicated to music."
+
+		afunction	byte
+			args
+			libs
+			subs	_mt_E8Trigger_stub,0,0
+		name	"MTE8Trigger","Value of the last E8 command."
+
 blitz_finit:
-		nullsub	_blitz_mt_lib_finit,0,0
+		nullsub	_blitz_mt_lib_finit,0,0 ; Call deinit routine on exit
 
 		libfin ; End of Blitz library header
 
@@ -620,18 +640,36 @@ _mt_end:
 ;------------ Blitz2 stubs -----------
 _mt_enable_stub:
 	ifd	SDATA
-	move.b d0,mt_Enable(a4)
+	trap	#0
+	move.b	d0,mt_Enable(a4)
 	else
 	lea	mt_data+mt_Enable(pc),a0
-	move.b d0,(a0)
+	move.b	d0,(a0)
 	endc
 	rts
 
 _mt_end_stub:
-	movem.l a3-a6,-(sp)
-	lea CUSTOM,a6
-	bra _mt_end
- 
+	movem.l	a3-a6,-(sp)
+	lea	CUSTOM,a6
+	bra	_mt_end
+
+_mt_MusicChannels_stub:
+	ifd	SDATA
+	move.b	d0,mt_MusicChannels(a4)
+	else
+	lea	mt_data+mt_MusicChannels(pc),a0
+	move.b	d0,(a0)
+	endc
+	rts
+
+_mt_E8Trigger_stub:
+	ifd	SDATA
+	move.b	mt_MusicChannels(a4),d0
+	else
+	lea	mt_data+mt_MusicChannels(pc),a0
+	move.b	(a0),d0
+	endc
+	rts
 ;-------------------------------------
 _mt_soundfx_soundobject:
 	movem.l	a3-a6,-(sp)
@@ -972,6 +1010,9 @@ _mt_musicmask:
 ; a6 = CUSTOM
 ; d0.b = channel-mask (bit 0 for channel 0, ..., bit 3 for channel 3)
 
+	move.l	a6,-(sp)   ; Save A6 for Blitz
+	lea	CUSTOM,a6  ; Prepare A6 for player
+
 	ifnd	SDATA
 	move.l	a4,-(sp)
 	lea	mt_data(pc),a4
@@ -993,6 +1034,9 @@ _mt_musicmask:
 	ifnd	SDATA
 	move.l	(sp)+,a4
 	endc
+
+	move.l	(sp)+,a6  ; Restore A6 for Blitz
+
 	rts
 
 
@@ -1004,6 +1048,9 @@ _mt_mastervol:
 ; sound effects (which is desired).
 ; a6 = CUSTOM
 ; d0.w = master volume
+
+	move.l	a6,-(sp) ; Save A6 for Blitz
+	lea	CUSTOM,a6   ; Prepare A6 for player
 
 	; stingray, since each volume table has a size of 65 bytes
 	; we simply multiply (optimised of course) by 65 to get the
@@ -1021,6 +1068,8 @@ _mt_mastervol:
 	move.l	a0,(a1)
 	endc
 	move.w	#$c000,INTENA(a6)
+
+	move.l	(sp)+,a6  ; Restore A6 for Blitz
 
 	rts
 
