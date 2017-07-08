@@ -93,13 +93,18 @@
 		include	"cia.i"
 
 		audiolib equ   116
+		banklib  equ   76
+
 		libheader 195,0,0,blitz_finit,runerrs
 		
 		astatement
-			args	long,byte
+			args	word,byte
+			libs	banklib,$1080
+			subs	_mt_init_bank,0,0
+			args	long,long,byte
 			libs
-			subs	_mt_init,0,0
-		name "MTInit","module address, starting position (inserts module into player)",0
+			subs	_mt_init_stub,0,0
+		name "MTInit","Bank#, startpos | module addr, instr addr, startpos (inserts module into player)",0
 		
 		astatement
 			args	byte
@@ -129,13 +134,10 @@
 			args	long,word,word,word
 			libs
 			subs	_mt_soundfx_stub,0,0
-		name "MTSoundFX","samplepointer.l, length.w, period.w, volume.w (0..64)"
-
-		astatement
 			args	word,word
 			libs	audiolib,$1080
 			subs	_mt_soundfx_soundobject,_soundobjectcheck,0
-		name	"MTSound","Sound#, volume (0-64)"
+		name "MTSoundFX","Sound#, volume (0..64)| sample_addr.l, length.w, period.w, volume.w"
 
 		astatement
 			args	word
@@ -500,11 +502,18 @@ _mt_init:
 ; d0 = initial song position
 
 ; --- Init for Blitz ----
-	movem.l	a3-a6,-(sp)
+_mt_init_bank:
+	move.l	#0,a1   ; Set sample pointer to NULL
+	move.b	d1,d0   ; Set starting position
+	move.l	(a0),a0 ; Set module address
+	bra	_mt_init_blitz_done
+_mt_init_stub:
+	move.l	d0,a0   ; Set module address
+	move.l	d1,a1   ; Set sample pointer
+	move.b	d2,d0   ; Set starting position
+_mt_init_blitz_done:
+	movem.l  a3-a6,-(sp)
 	lea	CUSTOM,a6
-	move.l	d0,a0
-	move.l	#0,a1
-	moveq	#1,d0
 ; -----------------------
 
 	ifnd	SDATA
