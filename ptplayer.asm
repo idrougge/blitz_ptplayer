@@ -156,8 +156,9 @@ DMADELAY	equ	576		; was 496
 
 audiolib equ   116
 banklib  equ   76
+ptplayerlib equ 48
 
-		libheader 195,0,0,blitz_finit,runerrs
+		libheader ptplayerlib,0,0,blitz_finit,runerrs
 		
 		astatement
 			args	word,byte
