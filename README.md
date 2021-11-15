@@ -1,6 +1,10 @@
 # blitz_ptplayer
 Port of Frank Wille's Protracker player as a Blitz Basic library
 
+Blitz Basic function/statement entry points added by idrougge
+
+VBR fix by phx
+
 compiled with vasm 1.8l, with the following options:
 vasm -phxass -Faout ptplayer.asm
 
