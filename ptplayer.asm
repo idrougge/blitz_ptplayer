@@ -158,7 +158,7 @@ audiolib equ   116
 banklib  equ   76
 ptplayerlib equ 48
 
-		libheader ptplayerlib,0,0,blitz_finit,runerrs
+		libheader ptplayerlib,0,0,blitz_finit,0
 		
 		astatement
 			args	word,byte
@@ -199,13 +199,13 @@ ptplayerlib equ 48
 			subs	_mt_soundfx_stub,0,0
 			args	word,word
 			libs	audiolib,$1080
-			subs	_mt_soundfx_soundobject,_soundobjectcheck,0
+			subs	_mt_soundfx_soundobject,0,0
 		name "MTSoundFX","Sound#, volume (0..64)| sample_addr.l, length.w, period.w, volume.w"
 
 		astatement
 			args	word
 			libs
-			subs	_mt_mastervol,_volumecheck,0
+			subs	_mt_mastervol,0,0
 		name	"MTMasterVolume","Master volume (0..64) for all music channels."
 
 		astatement
@@ -412,6 +412,8 @@ _mt_install_cia:
 _mt_remove_cia:
 ; Remove CIA-B music interrupt and restore the old vector.
 ; a6 = CUSTOM
+	movem.l a3-a6,-(sp) ; Save registers for Blitz 2
+	lea CUSTOM,a6
 
 	ifnd	SDATA
 	move.l	a4,-(sp)
@@ -448,6 +450,8 @@ _mt_remove_cia:
 	ifnd	SDATA
 	move.l	(sp)+,a4
 	endc
+	
+	movem.l (sp)+,a3-a6	; Restore registers for Blitz
 	rts
 
 
@@ -566,6 +570,21 @@ _mt_init:
 ; a0 = module pointer
 ; a1 = sample pointer (NULL means samples are stored within the module)
 ; d0 = initial song position
+
+; --- Init for Blitz ----
+_mt_init_bank:
+	move.l	#0,a1   ; Set sample pointer to NULL
+	move.b	d1,d0   ; Set starting position
+	move.l	(a0),a0 ; Set module address
+	bra	_mt_init_blitz_done
+_mt_init_stub:
+	move.l	d0,a0   ; Set module address
+	move.l	d1,a1   ; Set sample pointer
+	move.b	d2,d0   ; Set starting position
+_mt_init_blitz_done:
+	movem.l  a3-a6,-(sp)
+	lea	CUSTOM,a6
+; -----------------------
 
 	ifnd	SDATA
 	move.l	a4,-(sp)
@@ -710,13 +729,57 @@ _mt_end:
 	move.w	d0,AUD2VOL(a6)
 	move.w	d0,AUD3VOL(a6)
 	move.w	#$000f,DMACON(a6)
+	
+	movem.l (sp)+,a3-a6 ; Restore registers before returning to Blitz
 	rts
 
+;------------ Blitz2 stubs -----------
+_mt_enable_stub:
+	ifd	SDATA
+	trap	#0
+	move.b	d0,mt_Enable(a4)
+	else
+	lea	mt_data+mt_Enable(pc),a0
+	move.b	d0,(a0)
+	endc
+	rts
+
+_mt_end_stub:
+	movem.l	a3-a6,-(sp)
+	lea	CUSTOM,a6
+	bra	_mt_end
+
+_mt_MusicChannels_stub:
+	ifd	SDATA
+	move.b	d0,mt_MusicChannels(a4)
+	else
+	lea	mt_data+mt_MusicChannels(pc),a0
+	move.b	d0,(a0)
+	endc
+	rts
+
+_mt_E8Trigger_stub:
+	ifd	SDATA
+	move.b	mt_MusicChannels(a4),d0
+	else
+	lea	mt_data+mt_MusicChannels(pc),a0
+	move.b	(a0),d0
+	endc
+	rts
+;-------------------------------------
+_mt_soundfx_soundobject:
+	movem.l	a3-a6,-(sp)
+	lea	CUSTOM,a6
+	move.w	d1,d2      ; volume
+	move.w	4(a0),d1   ; period
+	move.w	6(a0),d0   ; length
+	move.l	(a0),a0    ; sample data
+	bra	_mt_soundfx
 
 	ifeq	MINIMAL
 ;---------------------------------------------------------------------------
 	xdef	_mt_soundfx
-_mt_soundfx:
+_mt_soundfx_stub:
 ; Request playing of an external sound effect on the most unused channel.
 ; This function is for compatibility with the old API only!
 ; You should call _mt_playfx instead!
@@ -726,6 +789,16 @@ _mt_soundfx:
 ; d1.w = sample period
 ; d2.w = sample volume
 
+;--- Blitz 2 call stub -----
+	movem.l	a3-a6,-(sp)
+	lea	CUSTOM,a6
+	move.l	d0,a0
+	move.w	d1,d0
+	move.w	d2,d1
+	move.w	d3,d2
+;---------------------------
+
+_mt_soundfx:
 	lea	-sfx_sizeof(sp),sp
 	move.l	a0,sfx_ptr(sp)
 	movem.w	d0-d2,sfx_len(sp)
@@ -733,6 +806,7 @@ _mt_soundfx:
 	move.l	sp,a0
 	bsr	_mt_playfx
 	lea	sfx_sizeof(sp),sp
+	movem.l	(sp)+,a3-a6  ; Restore registers for Blitz
 	rts
 
 
@@ -1114,6 +1188,9 @@ _mt_musicmask:
 ; a6 = CUSTOM
 ; d0.b = channel-mask (bit 0 for channel 0, ..., bit 3 for channel 3)
 
+	move.l	a6,-(sp)   ; Save A6 for Blitz
+	lea	CUSTOM,a6  ; Prepare A6 for player
+
 	ifnd	SDATA
 	move.l	a4,-(sp)
 	lea	mt_data(pc),a4
@@ -1135,6 +1212,9 @@ _mt_musicmask:
 	ifnd	SDATA
 	move.l	(sp)+,a4
 	endc
+
+	move.l	(sp)+,a6  ; Restore A6 for Blitz
+
 	rts
 
 
@@ -1146,6 +1226,9 @@ _mt_mastervol:
 ; sound effects (which is desired).
 ; a6 = CUSTOM
 ; d0.w = master volume
+
+	move.l	a6,-(sp) ; Save A6 for Blitz
+	lea	CUSTOM,a6   ; Prepare A6 for player
 
 	ifnd	SDATA
 	move.l	a4,-(sp)
@@ -1182,6 +1265,8 @@ _mt_mastervol:
 	ifnd	SDATA
 	move.l	(sp)+,a4
 	endc
+	
+	move.l	(sp)+,a6  ; Restore A6 for Blitz
 	rts
 
 
