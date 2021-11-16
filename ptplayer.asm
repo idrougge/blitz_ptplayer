@@ -225,6 +225,18 @@ ptplayerlib equ 48
 			libs
 			subs	_mt_E8Trigger_stub,0,0
 		name	"MTE8Trigger","Value of the last E8 command."
+		
+		astatement
+			args	long
+			libs
+			subs	_mt_loopfx_stub,0,0
+		name	"MTLoopFx","SfxStructurePointer"
+		
+		astatement
+			args	byte
+			libs
+			subs	_mt_stopfx_stub,0,0
+		name	"MTStopFx","channel to stop FX loop"
 
 blitz_finit:
 		nullsub	_blitz_mt_lib_finit,0,0 ; Call deinit routine on exit
@@ -1102,7 +1114,12 @@ exit_playfx:
 channel_offsets:
 	dc.w	0*n_sizeof,1*n_sizeof,2*n_sizeof,3*n_sizeof
 
-
+_mt_loopfx_stub:
+;--- Blitz 2 call stub -----
+	movem.l	a3-a6,-(sp)
+	lea	CUSTOM,a6
+	move.l	d0,a0 ; sfx-structure pointer
+;---------------------------
 ;---------------------------------------------------------------------------
 	xdef	_mt_loopfx
 _mt_loopfx:
@@ -1137,10 +1154,16 @@ _mt_loopfx:
 	move.w	(a0),n_sfxvol(a1)	; sfx_vol
 	st	n_sfxpri(a1)		; sfx_pri -1 enables looped mode
 	move.w	#$c000,INTENA(a6)
+	
+	movem.l (sp)+,a3-a6 ; Restore registers before returning to Blitz
 
 	rts
 
-
+_mt_stopfx_stub:
+;--- Blitz 2 call stub -----
+	movem.l	a3-a6,-(sp)
+	lea	CUSTOM,a6
+;---------------------------
 ;---------------------------------------------------------------------------
 	xdef	_mt_stopfx
 _mt_stopfx:
@@ -1177,6 +1200,7 @@ _mt_stopfx:
 	endc
 .1:	move.w	#$c000,INTENA(a6)
 
+	movem.l (sp)+,a3-a6 ; Restore registers before returning to Blitz
 	rts
 
 
