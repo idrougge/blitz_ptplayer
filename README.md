@@ -6,7 +6,7 @@ Blitz Basic function/statement entry points added by idrougge
 VBR fix by phx
 
 compiled with vasm 1.8l, with the following options:
-vasm -phxass -Faout ptplayer.asm
+vasmm68k_mot.exe -devpac -Fhunkexe -kick1hunks -nosym  ptplayer.asm -o ptplayer.obj
 
 Built wit the following configuration flags:
 
