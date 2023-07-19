@@ -4,7 +4,7 @@
 ;
 ; Version 6.3
 ; Written by Frank Wille in 2013, 2016-2023.
-; Converted to BlitzBasic library by E-Penguin based on work by idrouge
+; Converted to BlitzBasic library by E-Penguin based on work by idrougge
 ;
 ; I, the copyright holder of this work, hereby release it into the
 ; public domain. This applies worldwide.
