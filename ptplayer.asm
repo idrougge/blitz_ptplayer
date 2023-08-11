@@ -977,7 +977,7 @@ _mt_soundfx:
 	movem.w	d0-d2,sfx_len(sp)
 	move.w	#$ff01,sfx_cha(sp)	; any channel, priority=1
 	move.l	sp,a0
-	bsr	_mt_playfx
+	bsr	_mt_playfx_stub
 	lea	sfx_sizeof(sp),sp
 	movem.l	(sp)+,a3-a6  ; Restore registers for Blitz
 	rts
@@ -1273,11 +1273,11 @@ exit_playfx:
 	ifd	SDATA
 	movem.l	(sp)+,d2-d7/a0-a3/a5
 	else
-	movem.l	(sp)+,d2-d7/a0-a5
+	movem.l	(sp)+,d2-d7/a0-a5	
+	endc
 	
 	movem.l	(sp)+,a3-a6  ; Restore registers for Blitz
-	
-	endc
+		
 	rts
 
 channel_offsets:
