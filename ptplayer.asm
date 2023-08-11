@@ -220,6 +220,12 @@ ptplayerlib equ 48
 			libs	audiolib,$1080
 			subs	_mt_soundfx_soundobject,0,0
 		name "MTSoundFX","Sound#, volume (0..64)| sample_addr.l, length.w, period.w, volume.w"
+		
+		afunction long
+			args	long
+			libs
+			subs	_mt_playfx_stub,0,0
+		name	"MTPlayFx","SfxStructurePointer, returns SfxChanStatus pointer"
 
 		astatement
 			args	word
@@ -256,6 +262,30 @@ ptplayerlib equ 48
 			libs
 			subs	_mt_stopfx_stub,0,0
 		name	"MTStopFx","channel to stop FX loop"
+		
+		astatement
+			args	word,byte
+			libs
+			subs	_mt_samplevol_stub,0,0
+		name	"MTSampleVolume", "Redefine a sample's volume"
+		
+		astatement
+			args	byte
+			libs
+			subs	_mt_channelmask_stub,0,0
+		name	"MTChannelMask", "Clear bits 0-3 to mute channel for music"
+		
+		astatement
+			args	byte
+			libs
+			subs	_mt_SongEnd_stub,0,0
+		name	"MTSetSongEnd","Set value of the mt_SongEnd flag to 0xFF to end after it has finished"		
+
+		afunction byte
+			args
+			libs
+			subs	_mt_IsEnabled_stub,0,0
+		name	"MTIsEnabled","Get status of playback"
 
 blitz_finit:
 		nullsub	_blitz_mt_lib_finit,0,0 ; Call deinit routine on exit
@@ -878,15 +908,37 @@ resetch:
 	st	n_enable(a0)
 	endc
 	rts
-
-_mt_E8Trigger_stub:
+	
+_mt_IsEnabled_stub:
 	ifd	SDATA
-	move.b	mt_MusicChannels(a4),d0
+	move.b	mt_Enable(a4),d0
 	else
-	lea	mt_data+mt_MusicChannels(pc),a0
+	lea	mt_data+mt_Enable(pc),a0
 	move.b	(a0),d0
 	endc
 	rts
+
+_mt_E8Trigger_stub:
+	ifd	SDATA
+	move.b	mt_E8Trigger(a4),d0
+	else
+	lea	mt_data+mt_E8Trigger(pc),a0
+	move.b	(a0),d0
+	endc
+	rts
+	
+_mt_SongEnd_stub:
+; Set mt_SongEnd to 0xFF to stop after current song is played
+; d0.w = new value
+	ifd	SDATA
+	trap	#0
+	move.b	d0,mt_SongEnd(a4)
+	else
+	lea	mt_data+mt_SongEnd(pc),a0
+	move.b	d0,(a0)
+	endc
+	rts
+	
 ;-------------------------------------
 _mt_soundfx_soundobject:
 	movem.l	a3-a6,-(sp)
@@ -932,6 +984,11 @@ _mt_soundfx:
 
 
 ;---------------------------------------------------------------------------
+_mt_playfx_stub:
+	movem.l	a3-a6,-(sp)
+	lea	CUSTOM,a6
+	move.l	d0,a0 ; sfx-structure pointer
+
 	xdef	_mt_playfx
 _mt_playfx:
 ; Request playing of a prioritized external sound effect, either on a
@@ -1217,6 +1274,9 @@ exit_playfx:
 	movem.l	(sp)+,d2-d7/a0-a3/a5
 	else
 	movem.l	(sp)+,d2-d7/a0-a5
+	
+	movem.l	(sp)+,a3-a6  ; Restore registers for Blitz
+	
 	endc
 	rts
 
@@ -1391,6 +1451,12 @@ _mt_mastervol:
 
 
 ;---------------------------------------------------------------------------
+_mt_channelmask_stub:
+;--- Blitz 2 call stub -----
+	movem.l	a3-a6,-(sp)
+	lea	CUSTOM,a6
+;---------------------------
+
 	xdef	_mt_channelmask
 _mt_channelmask:
 ; Define which music channels are muted. Doesn't affect sound effects.
@@ -1419,6 +1485,9 @@ _mt_channelmask:
 
 	ifnd	SDATA
 	move.l	(sp)+,a4
+	
+	movem.l (sp)+,a3-a6	; Restore registers for Blitz
+	
 	endc
 	rts
 
@@ -1455,6 +1524,12 @@ set_all_volumes:
 
 
 ;---------------------------------------------------------------------------
+_mt_samplevol_stub:
+;--- Blitz 2 call stub -----
+	movem.l	a3-a6,-(sp)
+	lea	CUSTOM,a6
+;---------------------------	
+
 	xdef	_mt_samplevol
 _mt_samplevol:
 ; Redefine a sample's volume. May also be done while the song is playing.
@@ -1477,6 +1552,9 @@ _mt_samplevol:
 	sub.w	d1,d0			; table index: sample number * 30
 	swap	d1
 	move.b	d1,12+3(a0,d0.w)	; set sample's volume
+	
+	movem.l (sp)+,a3-a6	; Restore registers for Blitz
+	
 	rts
 	endc	; !MINIMAL
 

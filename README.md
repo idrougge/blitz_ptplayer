@@ -1,6 +1,9 @@
 # blitz_ptplayer
 Port of Frank Wille's Protracker player v6.3 as a Blitz Basic library
 
+******** THIS VERSION HAS A BUG, DON'T USE IT YET****************
+Please take the older version, pre-2023 for now!
+
 Blitz Basic function/statement entry points added by idrougge
 Further development by E-Penguin
 
