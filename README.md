@@ -2,6 +2,7 @@
 Port of Frank Wille's Protracker player v6.4 as a Blitz Basic library
 
 Blitz Basic function/statement entry points added by idrougge, macros by earok
+
 Further development by E-Penguin
 
 VBR fix by phx
