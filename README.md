@@ -24,6 +24,7 @@ Command reference:
 LoadBank 0,"mod.song",2 (loads module into bank 0 in chipmem (2))
 
 MTInstall PAL=True, NTSC=False (installs player in program) [OSCOMPAT=0, default]
+
 success.l = MTInstall (installs player in program) [OSCOMPAT=1]
 
 MTInit Bank#, startpos (inserts module into player)
