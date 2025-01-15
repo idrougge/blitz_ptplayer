@@ -1,14 +1,12 @@
 # blitz_ptplayer
-Port of Frank Wille's Protracker player v6.3 as a Blitz Basic library
+Port of Frank Wille's Protracker player v6.4 as a Blitz Basic library
 
-Please take the older version, pre-2023 for now!
-
-Blitz Basic function/statement entry points added by idrougge
+Blitz Basic function/statement entry points added by idrougge, macros by earok
 Further development by E-Penguin
 
 VBR fix by phx
 
-compiled with vasm 1.9d, with the following options:
+compiled with vasm 2.0a, with the following options:
 vasmm68k_mot.exe -devpac -Fhunkexe -kick1hunks -nosym  ptplayer.asm -o ptplayer.obj
 
 Built wit the following configuration flags:
@@ -19,10 +17,13 @@ ENABLE_SAWRECT	equ	0
 
 NULL_IS_CLEARED	equ	0
 
+New for ptplayer 6.4 is "OS Compatible" mode; there is a separate build for this with the OSCOMPAT flag = 1. As a result, the MTInstall statement has changed, see below if using this version. Rename the obj to remove "_oscompat" and rebuild the blitzlibs accordingly.
+
 Command reference:
 LoadBank 0,"mod.song",2 (loads module into bank 0 in chipmem (2))
 
-MTInstall PAL=True, NTSC=False (installs player in program)
+MTInstall PAL=True, NTSC=False (installs player in program) [OSCOMPAT=0, default]
+success.l = MTInstall (installs player in program) [OSCOMPAT=1]
 
 MTInit Bank#, startpos (inserts module into player)
 
