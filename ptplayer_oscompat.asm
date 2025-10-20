@@ -176,7 +176,7 @@ ENABLE_SAWRECT	equ	0
 ; Set this if you can guarantee that the word at $0 is cleared, and if
 ; you want to use it for idle-looping of samples.
 	ifnd	NULL_IS_CLEARED
-NULL_IS_CLEARED	equ	0
+NULL_IS_CLEARED	equ	1
 	endc
 
 ; Setting NO_TIMERS disables the use of both CIA-B timers completely, which
@@ -3028,12 +3028,16 @@ mt_tremoctrl:
 	rts
 
 
+; E8 fix backported from 6.5, from phx
+; https://eab.abime.net/showpost.php?p=1755857&postcount=220
 mt_e8:
 ; cmd E 8 x (x = trigger value)
 ; d0 = x
 
-	move.b	d0,mt_E8Trigger(a4)
-	rts
+        tst.b   mt_Counter(a4)
+        bne     .1
+        move.b  d0,mt_E8Trigger(a4)
+.1:     rts
 
 
 mt_retrignote:
