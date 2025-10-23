@@ -170,13 +170,13 @@ MINIMAL		equ	0
 ; will be replaced by sine-waves. They are rarely used and disabling
 ; them will free a lot of memory for the tables.
 	ifnd	ENABLE_SAWRECT
-ENABLE_SAWRECT	equ	0
+ENABLE_SAWRECT	equ	1
 	endc
 
 ; Set this if you can guarantee that the word at $0 is cleared, and if
 ; you want to use it for idle-looping of samples.
 	ifnd	NULL_IS_CLEARED
-NULL_IS_CLEARED	equ	1
+NULL_IS_CLEARED	equ	0
 	endc
 
 ; Setting NO_TIMERS disables the use of both CIA-B timers completely, which
