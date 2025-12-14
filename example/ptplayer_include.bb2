@@ -1,0 +1,43 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Useful structures and functions
+; used with the ptplayer library
+;
+; Thanks to TheoTheoderich
+
+NEWTYPE .sound
+  _data.l
+  _period.w
+  _length.w
+  _loop.l
+  _looplength.w
+  _pad.b[2]
+End NEWTYPE
+
+NEWTYPE .sfx
+  sfxPtr.l ; Pointer to sample start in chip ram, even address
+  sfxLen.w ; Sample length
+  sfxPer.w ; Hardware replay period for sample
+  sfxVol.w ; Volume 0..64, is unaffected by the song's master volume
+  sfxCha.b ; 0..3 selected replay channel, -1 selects best channel
+  sfxPri.b ; unsigned priority, must be non-zero
+  ;sfxSiz.b
+End NEWTYPE
+
+Statement SFXInit {*fx.sfx, snd.l, vol.w, cha.b, pri.b}
+  *_snd.sound = Addr Sound(snd)  ; Get the pointer to the sound
+  *fx\sfxPtr=*_snd\_data       ; Copy the data
+  *fx\sfxLen=*_snd\_length     ; ...
+  *fx\sfxPer=*_snd\_period
+  *fx\sfxVol=vol
+  *fx\sfxCha=cha
+  *fx\sfxPri=pri
+  ;*fx\sfxSiz=siz
+End Statement
+
+NEWTYPE .SfxChanStatus
+    n_note.w      ; UWORD translates to word (.w) in Blitz Basic
+    n_cmd.w       ; Another word
+    n_index.b     ; UBYTE translates to byte (.b) in Blitz Basic
+    n_sfxpri.b    ; Another byte
+End NEWTYPE
+
